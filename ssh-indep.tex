@@ -748,6 +748,18 @@ n'est pas copiée, mais elle est \emph{utilisable} depuis le saut.
 (saut puis cible) ; le saut ne voit qu'un flux TCP brut qu'il transite (\texttt{-W}).
 Aucune clé ne passe sur le saut, aucune variable d'agent n'y est exposée.
 \end{solution}
+
+\question Avant de continuez comment peut-on envoyer la clé publique de la cible à la cible 
+à travers un saut par le bastion ?
+\begin{solution}
+
+\begin{bashcode}
+$ ssh-copy-id -i id_ed25519_cible.pub -o "ProxyJump=bastion@localhost:2222" cible@10.0.2.3
+# Bastion et Cible sont dans un réseau NAT. Il y a une redirection de port de localhost:2222 -> bastion:22. 
+# Bastion peut contacter Cible par leur réseau local sur les ports par defaut
+\end{bashcode}
+\end{solution}
+
 \question \textbf{Ancienne syntaxe} : connectez-vous à la cible avec
 \texttt{ssh -o "ProxyCommand=ssh bastion -W \%h:\%p" 10.99.0.11}. Qui exécute quoi sur
 le bastion ? Que fait exactement \texttt{-W hôte:port} ?
@@ -952,18 +964,17 @@ vit (\texttt{ControlPersist 10m}).
 être configuré ainsi ?
 \begin{solution}
 \begin{itemize}
-  \item \texttt{AllowTcpForwarding yes} (défaut) : autorise \emph{tous} les tunnels
-        (\texttt{-L}, \texttt{-R}, \texttt{-D}). Valeurs : \texttt{yes} (ou \texttt{all}),
-        \texttt{local} (\texttt{-L} seul), \texttt{remote} (\texttt{-R} seul), \texttt{no}.
-  \item \texttt{AllowTcpForwarding no} : refuse \emph{toutes} les redirections TCP,
-        \texttt{-L} compris, et aussi \texttt{ProxyJump} (qui repose sur \texttt{-W}).
+  \item \texttt{AllowTcpForwarding yes} (défaut) : autorise les tunnels \emph{locaux}
+        (\texttt{-L}) depuis les clients.
+  \item \texttt{AllowTcpForwarding no} : refuse les tunnels \texttt{-R} \emph{demandés
+        par le client distant} (le client local \texttt{-L} est quand même possible ;
+        c'est \texttt{PermitTunnel} et les règles \texttt{Match} qui affinent).
         Sur un bastion « kiosque » (accès shell only, pas de tunnel),
         \texttt{AllowTcpForwarding no} empêche d'utiliser le bastion comme relais pour
         contourner le réseau.
   \item \texttt{GatewayPorts no} (défaut) : les écouteurs \texttt{-R} ne se bindent que sur
-        la boucle de la machine distante. \texttt{GatewayPorts yes} ou
-        \texttt{clientspecified} autoriserait le bind sur d'autres interfaces : à réserver
-        à des cas très encadrés.
+        la boucle de la machine distante. \texttt{GatewayPorts clients/all} autoriserait
+        le bind sur d'autres interfaces : à réserver à des cas très encadrés.
 \end{itemize}
 \end{solution}
 \question \textbf{Tunnel dynamique} : ouvrez \texttt{ssh -N -D 1080 cible} puis depuis
